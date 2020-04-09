@@ -1,5 +1,4 @@
 from conflict_graph import ConflictsGraph
-import sys
 from z3 import Solver, sat, Not, Or, Bool
 
 
@@ -51,32 +50,23 @@ class ConflictsSolver:
         model = self.solver.model()
         keys = sorted(list(self.vars.keys()), key=literal_var)
 
+        grouped = {}
         for _, chunk in chunks(keys, self.groups_num):
             values = list(
                 map(lambda key: model.evaluate(self.vars[key]), chunk))
-            group = values.index(True)
-            print(int(chunk[0]) // self.groups_num, group)
+            group = values.index(True) + 1
+            key = int(chunk[0]) // self.groups_num
+            grouped[key] = group
+        return grouped
 
-    def _print_model(self):
-        self._assign_groups()
+    def _get_model(self):
+        return self._assign_groups()
 
     def solve(self, vertices, clauses):
         self._create_vars(vertices)
         self._add_clauses(clauses)
 
         if self.solver.check() == sat:
-            print("SAT")
-            self._print_model()
+            return ['SAT', self._get_model()]
         else:
-            print("UNSAT")
-
-
-if __name__ == '__main__':
-    graph_file = sys.argv[1]
-    groups_num = 5
-    graph = ConflictsGraph(graph_file, groups_num)
-    vertices, *_, clauses = graph.to_SAT()
-    solver = ConflictsSolver(groups_num)
-    solver.solve(vertices, clauses)
-
-    # print(graph.to_SAT_string())
+            return ['UNSAT', None]

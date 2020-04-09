@@ -1,6 +1,7 @@
 import json
 import sys
 from itertools import combinations
+from copy import deepcopy
 
 
 class Vertex():
@@ -31,8 +32,8 @@ class Graph():
         vertex1.add_neighbour(vertex2)
         vertex2.add_neighbour(vertex1)
 
-    def reindex_vertices(self):
-        for i, vertex in enumerate(self.vertices):
+    def reindex_vertices(self, vertices):
+        for i, vertex in enumerate(vertices):
             vertex.id = i
 
     def __str__(self):
@@ -44,14 +45,14 @@ class Graph():
 
 class ConflictsGraph(Graph):
 
-    def __init__(self, filename, groups_num):
+    def __init__(self, filename):
         super().__init__()
-        self.init_from_json(filename, groups_num)
+        self.init_from_json(filename)
+        self.groups = []
 
-    def init_from_json(self, filename, groups_num):
+    def init_from_json(self, filename):
         with open(filename, 'r') as file:
             data = json.load(file)
-            self.groups = list(range(1, groups_num + 1))
             for id in range(1, data['nodes']+1):
                 vertex = Vertex(id)
                 self.add_vertex(vertex)
@@ -62,23 +63,25 @@ class ConflictsGraph(Graph):
                 self.add_vertex(disliked)
                 self.connect_vertices(source, disliked)
 
-    def _remove_irrevelant_vertices(self):
+    def _remove_irrevelant_vertices(self, vertices):
         """Leaves only those vertices that can make impact on coloring (coloring of vertices of degree < #groups is irrevelant)"""
-        self.vertices = list(filter(lambda vertex: len(
-            vertex.neighbours) >= len(self.groups), self.vertices))
-        for vertex in self.vertices:
+        vertices = list(filter(lambda vertex: len(
+            vertex.neighbours) >= len(self.groups), vertices))
+        for vertex in vertices:
             vertex.neighbours = list(
-                filter(lambda v: v in self.vertices, vertex.neighbours))
+                filter(lambda v: v in vertices, vertex.neighbours))
 
     def _leave_relevant_subgraph(self):
         """Loops remove_irrevelant_vertices method till there are none irrevelant vertices left"""
-        prev = len(self.vertices)
-        self._remove_irrevelant_vertices()
-        while len(self.vertices) != prev:
-            prev = len(self.vertices)
-            self._remove_irrevelant_vertices()
+        vertices = deepcopy(self.vertices)
+        prev = len(vertices)
+        self._remove_irrevelant_vertices(vertices)
+        while len(vertices) != prev:
+            prev = len(vertices)
+            self._remove_irrevelant_vertices(vertices)
+        return vertices
 
-    def to_SAT(self, reindex=False):
+    def to_SAT(self):
         def group(group_id, node_id):
             return str(len(self.groups) * node_id + group_id)
 
@@ -105,23 +108,20 @@ class ConflictsGraph(Graph):
         def not_the_same_groups(node1_id, node2_id):
             return [not_the_same_group(node1_id, node2_id, group_id) for group_id in self.groups]
 
-        self._leave_relevant_subgraph()
-        if reindex:
-            self.reindex_vertices()
-
+        vertices = self._leave_relevant_subgraph()
         clauses = []
         visited = []
-        for vertex in self.vertices:
+        for vertex in vertices:
             visited.append(vertex)
             clauses += exactly_one_group(vertex.id)
             for neighbour in vertex.neighbours:
                 if neighbour not in visited:
                     clauses += not_the_same_groups(vertex.id, neighbour.id)
 
-        vars_num = len(self.groups)*len(self.vertices)
+        vars_num = len(self.groups)*len(vertices)
         clauses_num = len(clauses)
 
-        return [self.vertices, vars_num, clauses_num, clauses]
+        return [vertices, vars_num, clauses_num, clauses]
 
     def to_SAT_string(self):
         def format_clauses(clauses):
@@ -131,3 +131,33 @@ class ConflictsGraph(Graph):
         if len(clauses) == 0:
             return f'p cnf 1 1\n1 0'
         return f'p cnf {len(self.groups)*len(self.vertices)} {len(clauses)}\n' + format_clauses(clauses)
+
+    def resolve_conflicts(self, solver, groups_num):
+        self.groups = list(range(1, groups_num + 1))
+        vertices, *_, clauses = self.to_SAT()
+        # assigns groups to vertices with degree > #groups
+        res, grouped = solver.solve(vertices, clauses)
+        if res == 'UNSAT':
+            return res
+
+        # simple group assignment using DFS
+        for vertex in self.vertices:
+            if not vertex.id in grouped:
+                available_groups = [0 for _ in len(self.groups)]
+                for neighbour in vertex.neighbours:
+                    if neighbour.id in grouped:
+                        group = grouped[neighbour.id] - 1
+                        available_groups[group] = 1
+                group = available_groups.index(0) + 1
+                grouped[vertex.id] = group
+
+        return grouped
+
+    def check_group_assignment(self, group):
+        for vertex in self.vertices:
+            vertex_group = group[vertex.id]
+            for neighbour in vertex.neighbours:
+                neighbour_group = group[neighbour.id]
+                if vertex_group == neighbour_group:
+                    return False
+        return True
