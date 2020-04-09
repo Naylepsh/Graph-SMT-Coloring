@@ -44,23 +44,23 @@ class Graph():
 
 class ConflictsGraph(Graph):
 
-    def __init__(self, filename):
+    def __init__(self, filename, groups_num):
         super().__init__()
-        self.init_from_json(filename)
+        self.init_from_json(filename, groups_num)
 
-    def init_from_json(self, filename):
+    def init_from_json(self, filename, groups_num):
         with open(filename, 'r') as file:
             data = json.load(file)
-            self.groups = list(range(1, data['groups'] + 1))
+            self.groups = list(range(1, groups_num + 1))
             for id in range(1, data['nodes']+1):
                 vertex = Vertex(id)
                 self.add_vertex(vertex)
             for conflict in data['conflicts']:
-                whiner = self.vertices[conflict['source']-1]
-                self.add_vertex(whiner)
-                victim = self.vertices[conflict['disliked']-1]
-                self.add_vertex(victim)
-                self.connect_vertices(whiner, victim)
+                source = self.vertices[conflict['source']-1]
+                self.add_vertex(source)
+                disliked = self.vertices[conflict['disliked']-1]
+                self.add_vertex(disliked)
+                self.connect_vertices(source, disliked)
 
     def _remove_irrevelant_vertices(self):
         """Leaves only those vertices that can make impact on coloring (coloring of vertices of degree < #groups is irrevelant)"""
@@ -69,7 +69,6 @@ class ConflictsGraph(Graph):
         for vertex in self.vertices:
             vertex.neighbours = list(
                 filter(lambda v: v in self.vertices, vertex.neighbours))
-        # self.reindex_vertices()
 
     def _leave_relevant_subgraph(self):
         """Loops remove_irrevelant_vertices method till there are none irrevelant vertices left"""
@@ -79,7 +78,7 @@ class ConflictsGraph(Graph):
             prev = len(self.vertices)
             self._remove_irrevelant_vertices()
 
-    def to_SAT(self):
+    def to_SAT(self, reindex=False):
         def group(group_id, node_id):
             return str(len(self.groups) * node_id + group_id)
 
@@ -107,7 +106,8 @@ class ConflictsGraph(Graph):
             return [not_the_same_group(node1_id, node2_id, group_id) for group_id in self.groups]
 
         self._leave_relevant_subgraph()
-        self.reindex_vertices()
+        if reindex:
+            self.reindex_vertices()
 
         clauses = []
         visited = []

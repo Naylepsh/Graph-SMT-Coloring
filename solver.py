@@ -31,32 +31,34 @@ class ConflictsSolver:
         return literal[0] == '-'
 
     def _access_var(self, literal_id):
-        # key = str((int(literal_id) - 1) // self.groups_num)
         key = str(literal_id)
         return self.vars[key]
 
     def _create_vars(self, vertices):
         for vertex in vertices:
-            key = str(vertex.id)
-            self.vars[key] = Bool(key)
+            for i in range(self.groups_num):
+                key = str(vertex.id*self.groups_num + i + 1)
+                self.vars[key] = Bool(key)
 
     def _assign_groups(self):
         def chunks(array, size):
             for i in range(0, len(array), size):
                 yield i // size, array[i:i + size]
 
+        def literal_var(literal):
+            return abs(int(literal))
+
         model = self.solver.model()
-        for i, chunk in chunks(list(self.vars.keys()), self.groups_num):
+        keys = sorted(list(self.vars.keys()), key=literal_var)
+
+        for _, chunk in chunks(keys, self.groups_num):
             values = list(
                 map(lambda key: model.evaluate(self.vars[key]), chunk))
             group = values.index(True)
-            print(i, group)
+            print(int(chunk[0]) // self.groups_num, group)
 
     def _print_model(self):
         self._assign_groups()
-        # model = self.solver.model()
-        # for key in self.vars:
-        #     print(model.evaluate(self.vars[key]))
 
     def solve(self, vertices, clauses):
         self._create_vars(vertices)
@@ -71,10 +73,10 @@ class ConflictsSolver:
 
 if __name__ == '__main__':
     graph_file = sys.argv[1]
-    graph = ConflictsGraph(graph_file)
-    vertices, vars_num, _, clauses = graph.to_SAT()
-    solver = ConflictsSolver(5)
-    # print(clauses)
+    groups_num = 5
+    graph = ConflictsGraph(graph_file, groups_num)
+    vertices, *_, clauses = graph.to_SAT()
+    solver = ConflictsSolver(groups_num)
     solver.solve(vertices, clauses)
 
     # print(graph.to_SAT_string())
