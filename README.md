@@ -19,3 +19,5 @@ Each troublesome vertex is given \[n] variables to represent its color. Each ver
   ```
 
 - Run the script with `python solve.py path/to/file.json number_of_colors`
+
+To check out expected graph file structure refer to [sample_graph.json](https://github.com/Naylepsh/Graph-SMT-Coloring/blob/master/sample_graph.json)
