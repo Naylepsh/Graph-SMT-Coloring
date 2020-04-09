@@ -116,13 +116,16 @@ class ConflictsGraph(Graph):
                 if neighbour not in visited:
                     clauses += not_the_same_groups(vertex.id, neighbour.id)
 
-        return clauses
+        vars_num = len(self.groups)*len(self.vertices)
+        clauses_num = len(clauses)
+
+        return [vars_num, clauses_num, clauses]
 
     def to_SAT_string(self):
         def format_clauses(clauses):
             return '\n'.join(list(map(lambda clause: ' '.join(clause+['0']), clauses)))
 
-        clauses = self.to_SAT()
+        *_, clauses = self.to_SAT()
         if len(clauses) == 0:
             return f'p cnf 1 1\n1 0'
         return f'p cnf {len(self.groups)*len(self.vertices)} {len(clauses)}\n' + format_clauses(clauses)
