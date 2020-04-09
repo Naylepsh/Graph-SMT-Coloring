@@ -126,9 +126,3 @@ class ConflictsGraph(Graph):
         if len(clauses) == 0:
             return f'p cnf 1 1\n1 0'
         return f'p cnf {len(self.groups)*len(self.vertices)} {len(clauses)}\n' + format_clauses(clauses)
-
-
-if __name__ == '__main__':
-    graph_file = sys.argv[1]
-    graph = ConflictsGraph(graph_file)
-    print(graph.to_SAT_string())
