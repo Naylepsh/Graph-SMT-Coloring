@@ -23,16 +23,21 @@ class ConflictsSolver:
     def _parse_literal(self, literal):
         if self._is_negated_literal(literal):
             literal_id = literal[1:]
-            return Not(self.vars[literal_id])
+            return Not(self._access_var(literal_id))
         literal_id = literal
-        return self.vars[literal_id]
+        return self._access_var(literal_id)
 
     def _is_negated_literal(self, literal):
         return literal[0] == '-'
 
-    def _create_vars(self, vars_num):
-        for i in range(1, vars_num + 1):
-            key = str(i)
+    def _access_var(self, literal_id):
+        # key = str((int(literal_id) - 1) // self.groups_num)
+        key = str(literal_id)
+        return self.vars[key]
+
+    def _create_vars(self, vertices):
+        for vertex in vertices:
+            key = str(vertex.id)
             self.vars[key] = Bool(key)
 
     def _assign_groups(self):
@@ -53,8 +58,8 @@ class ConflictsSolver:
         # for key in self.vars:
         #     print(model.evaluate(self.vars[key]))
 
-    def solve(self, vars_num, clauses):
-        self._create_vars(vars_num)
+    def solve(self, vertices, clauses):
+        self._create_vars(vertices)
         self._add_clauses(clauses)
 
         if self.solver.check() == sat:
@@ -67,8 +72,9 @@ class ConflictsSolver:
 if __name__ == '__main__':
     graph_file = sys.argv[1]
     graph = ConflictsGraph(graph_file)
-    vars_num, _, clauses = graph.to_SAT()
+    vertices, vars_num, _, clauses = graph.to_SAT()
     solver = ConflictsSolver(5)
-    solver.solve(vars_num, clauses)
+    # print(clauses)
+    solver.solve(vertices, clauses)
 
     # print(graph.to_SAT_string())

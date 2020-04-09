@@ -69,7 +69,7 @@ class ConflictsGraph(Graph):
         for vertex in self.vertices:
             vertex.neighbours = list(
                 filter(lambda v: v in self.vertices, vertex.neighbours))
-        self.reindex_vertices()
+        # self.reindex_vertices()
 
     def _leave_relevant_subgraph(self):
         """Loops remove_irrevelant_vertices method till there are none irrevelant vertices left"""
@@ -107,6 +107,8 @@ class ConflictsGraph(Graph):
             return [not_the_same_group(node1_id, node2_id, group_id) for group_id in self.groups]
 
         self._leave_relevant_subgraph()
+        self.reindex_vertices()
+
         clauses = []
         visited = []
         for vertex in self.vertices:
@@ -119,7 +121,7 @@ class ConflictsGraph(Graph):
         vars_num = len(self.groups)*len(self.vertices)
         clauses_num = len(clauses)
 
-        return [vars_num, clauses_num, clauses]
+        return [self.vertices, vars_num, clauses_num, clauses]
 
     def to_SAT_string(self):
         def format_clauses(clauses):
