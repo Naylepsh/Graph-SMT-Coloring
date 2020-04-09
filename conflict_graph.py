@@ -57,11 +57,11 @@ class ConflictsGraph(Graph):
                 vertex = Vertex(id)
                 self.add_vertex(vertex)
             for conflict in data['conflicts']:
-                source = self.vertices[conflict['source']-1]
-                self.add_vertex(source)
-                disliked = self.vertices[conflict['disliked']-1]
-                self.add_vertex(disliked)
-                self.connect_vertices(source, disliked)
+                v1 = self.vertices[conflict['v1']-1]
+                self.add_vertex(v1)
+                v2 = self.vertices[conflict['v2']-1]
+                self.add_vertex(v2)
+                self.connect_vertices(v1, v2)
 
     def _remove_irrevelant_vertices(self, vertices):
         """Leaves only those vertices that can make impact on coloring (coloring of vertices of degree < #groups is irrevelant)"""
