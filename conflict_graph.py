@@ -48,7 +48,7 @@ class ConflictsGraph(Graph):
     def __init__(self, filename):
         super().__init__()
         self.init_from_json(filename)
-        self.groups = []
+        self.colors = []
 
     def init_from_json(self, filename):
         with open(filename, 'r') as file:
@@ -66,7 +66,7 @@ class ConflictsGraph(Graph):
     def _remove_irrevelant_vertices(self, vertices):
         """Leaves only those vertices that can make impact on coloring (coloring of vertices of degree < #groups is irrevelant)"""
         vertices = list(filter(lambda vertex: len(
-            vertex.neighbours) >= len(self.groups), vertices))
+            vertex.neighbours) >= len(self.colors), vertices))
         for vertex in vertices:
             vertex.neighbours = list(
                 filter(lambda v: v in vertices, vertex.neighbours))
@@ -82,43 +82,43 @@ class ConflictsGraph(Graph):
         return vertices
 
     def to_SAT(self):
-        def group(group_id, node_id):
-            return str(len(self.groups) * node_id + group_id)
+        def color(color_id, node_id):
+            return str(len(self.colors) * node_id + color_id)
 
-        def not_group(group_id, node_id):
-            return '-' + group(group_id, node_id)
+        def not_color(color_id, node_id):
+            return '-' + color(color_id, node_id)
 
-        def at_least_one_group(node_id):
-            return [group(group_id, node_id) for group_id in self.groups]
+        def at_least_one_color(node_id):
+            return [color(color_id, node_id) for color_id in self.colors]
 
-        def not_both_groups(node_id, group1_id, group2_id):
-            return [not_group(group_id, node_id) for group_id in [group1_id, group2_id]]
+        def not_both_colors(node_id, color1_id, color2_id):
+            return [not_color(color_id, node_id) for color_id in [color1_id, color2_id]]
 
-        def exactly_one_group(node_id):
-            return [at_least_one_group(node_id)] \
-                + [not_both_groups(node_id, group1_id, group2_id)
-                   for (group1_id, group2_id) in combinations(self.groups, 2)]
+        def exactly_one_color(node_id):
+            return [at_least_one_color(node_id)] \
+                + [not_both_colors(node_id, color1_id, color2_id)
+                   for (color1_id, color2_id) in combinations(self.colors, 2)]
 
-        def not_the_same_group(node1_id, node2_id, group_id):
+        def not_the_same_color(node1_id, node2_id, color_id):
             return [
-                not_group(group_id, node1_id),
-                not_group(group_id, node2_id)
+                not_color(color_id, node1_id),
+                not_color(color_id, node2_id)
             ]
 
-        def not_the_same_groups(node1_id, node2_id):
-            return [not_the_same_group(node1_id, node2_id, group_id) for group_id in self.groups]
+        def not_the_same_colors(node1_id, node2_id):
+            return [not_the_same_color(node1_id, node2_id, color_id) for color_id in self.colors]
 
         vertices = self._leave_relevant_subgraph()
         clauses = []
         visited = []
         for vertex in vertices:
             visited.append(vertex)
-            clauses += exactly_one_group(vertex.id)
+            clauses += exactly_one_color(vertex.id)
             for neighbour in vertex.neighbours:
                 if neighbour not in visited:
-                    clauses += not_the_same_groups(vertex.id, neighbour.id)
+                    clauses += not_the_same_colors(vertex.id, neighbour.id)
 
-        vars_num = len(self.groups)*len(vertices)
+        vars_num = len(self.colors)*len(vertices)
         clauses_num = len(clauses)
 
         return [vertices, vars_num, clauses_num, clauses]
@@ -130,34 +130,34 @@ class ConflictsGraph(Graph):
         *_, clauses = self.to_SAT()
         if len(clauses) == 0:
             return f'p cnf 1 1\n1 0'
-        return f'p cnf {len(self.groups)*len(self.vertices)} {len(clauses)}\n' + format_clauses(clauses)
+        return f'p cnf {len(self.colors)*len(self.vertices)} {len(clauses)}\n' + format_clauses(clauses)
 
-    def resolve_conflicts(self, solver, groups_num):
-        self.groups = list(range(1, groups_num + 1))
+    def resolve_conflicts(self, solver, colors_num):
+        self.colors = list(range(1, colors_num + 1))
         vertices, *_, clauses = self.to_SAT()
         # assigns groups to vertices with degree > #groups
-        res, grouped = solver.solve(vertices, clauses)
+        res, colored = solver.solve(vertices, clauses)
         if res == 'UNSAT':
             return res
 
-        # simple group assignment using DFS
+        # simple color assignment using DFS
         for vertex in self.vertices:
-            if not vertex.id in grouped:
-                available_groups = [0 for _ in len(self.groups)]
+            if not vertex.id in colored:
+                available_colors = [0 for _ in len(self.colors)]
                 for neighbour in vertex.neighbours:
-                    if neighbour.id in grouped:
-                        group = grouped[neighbour.id] - 1
-                        available_groups[group] = 1
-                group = available_groups.index(0) + 1
-                grouped[vertex.id] = group
+                    if neighbour.id in colored:
+                        color = colored[neighbour.id] - 1
+                        available_colors[color] = 1
+                color = available_colors.index(0) + 1
+                colored[vertex.id] = color
 
-        return grouped
+        return colored
 
-    def check_group_assignment(self, group):
+    def check_color_assignment(self, colored):
         for vertex in self.vertices:
-            vertex_group = group[vertex.id]
+            vertex_group = colored[vertex.id]
             for neighbour in vertex.neighbours:
-                neighbour_group = group[neighbour.id]
+                neighbour_group = colored[neighbour.id]
                 if vertex_group == neighbour_group:
                     return False
         return True
