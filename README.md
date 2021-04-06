@@ -1,6 +1,6 @@
 # Graph Coloring Solver
 
-Generalization of [Tutors problem](https://github.com/Naylepsh/University/tree/master/2019-2020/Zima/PiZZO/ex2) (pdf in Polish).
+Generalization of [Tutors problem](https://github.com/Naylepsh/UWr-II/blob/master/Term%20V/PiZZO/ex2/zadanie%201.pdf) (pdf in Polish).
 Given a json file and a number of colors on input produces vertex color assignment (if one exists) using z3solver.
 
 ## How it works
