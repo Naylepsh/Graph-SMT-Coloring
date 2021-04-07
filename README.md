@@ -6,7 +6,7 @@ Given a json file and a number of colors on input produces vertex color assignme
 ## How it works
 
 A graph is stripped of non-troublesome vertices (those whose degree is lower than a given number of colors \[n]).
-Each troublesome vertex is given \[n] variables to represent its color. Each vertex gets a clause that says the vertex can have only one of those colors at the same time. Next, for all the edges between those vertices get a bunch of clauses that say its ends cannot have the same colors. All those clauses are then forwarded to SMT solver. At the end leftover colors are assigned to previously removed vertices with simple DFS color assignment.
+Each troublesome vertex is given \[n] variables to represent its color. Each vertex gets a clause that says the vertex can have only one of those colors at the same time. Next, all the edges between those vertices get a bunch of clauses that say one's vertices cannot have the same colors. All those clauses are then forwarded to SMT solver. At the end, the leftover colors are assigned to previously removed vertices with simple DFS color assignment.
 
 ## How to run
 
