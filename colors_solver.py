@@ -1,8 +1,7 @@
-from conflict_graph import ConflictsGraph
 from z3 import Solver, sat, Not, Or, Bool
 
 
-class ConflictsSolver:
+class ColorsSolver:
     def __init__(self, colors_num):
         self.solver = Solver()
         self.vars = {}

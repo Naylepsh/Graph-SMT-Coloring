@@ -1,5 +1,4 @@
 import json
-import sys
 from itertools import combinations
 from copy import deepcopy
 
@@ -43,7 +42,7 @@ class Graph():
         return '\n'.join(vertices_info)
 
 
-class ConflictsGraph(Graph):
+class ColoredGraph(Graph):
 
     def __init__(self, filename):
         super().__init__()
@@ -56,10 +55,10 @@ class ConflictsGraph(Graph):
             for id in range(1, data['nodes']+1):
                 vertex = Vertex(id)
                 self.add_vertex(vertex)
-            for conflict in data['conflicts']:
-                v1 = self.vertices[conflict['v1']-1]
+            for conflict in data['edges']:
+                v1 = self.vertices[conflict['from']-1]
                 self.add_vertex(v1)
-                v2 = self.vertices[conflict['v2']-1]
+                v2 = self.vertices[conflict['to']-1]
                 self.add_vertex(v2)
                 self.connect_vertices(v1, v2)
 
@@ -132,7 +131,7 @@ class ConflictsGraph(Graph):
             return f'p cnf 1 1\n1 0'
         return f'p cnf {len(self.colors)*len(self.vertices)} {len(clauses)}\n' + format_clauses(clauses)
 
-    def resolve_conflicts(self, solver, colors_num):
+    def resolve_colors(self, solver, colors_num):
         self.colors = list(range(1, colors_num + 1))
         vertices, *_, clauses = self.to_SAT()
         # assigns groups to vertices with degree > #groups
